@@ -622,7 +622,9 @@ class T_picklefunction(unittest.TestCase):
         x = theano.tensor.matrix()
         y = theano.shared(b)
 
-        f = theano.function([x], theano.tensor.dot(x, y))
+        z = theano.tensor.dot(x, y)
+
+        f = theano.function([x], z)
 
         import StringIO
         fp = StringIO.StringIO()
