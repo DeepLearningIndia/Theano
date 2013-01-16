@@ -321,8 +321,6 @@ class TensorStorageType(Type):
         return str(self)
         #"TensorType{%s, %s}" % (str(self.dtype), str(self.broadcastable))
 
-
-
 class TensorStorageVariable(Variable, _tensor_py_operators):
     """
     A Variable whose non-symbolic value is TensorStorage.
@@ -385,4 +383,4 @@ class TensorStorageVariable(Variable, _tensor_py_operators):
         return cp
 
     def _as_TensorVariable(self):
-        raise NotImplementedError()
+        return get_tensor_from_storage(self)
