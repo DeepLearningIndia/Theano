@@ -200,8 +200,10 @@ def rebuild_collect_shared(outputs,
     if updates is None:
         updates = []
     for (store_into, update_val) in iter_over_pairs(updates):
-        if not isinstance(store_into, SharedVariable):
-            raise TypeError('update target must be a SharedVariable',
+        if not isinstance(store_into, (SharedVariable,
+            TensorStorageVariable)):
+            raise TypeError('update target must be a SharedVariable '
+                    'or TensorStorageVariable',
                             store_into)
         if store_into in update_d:
             raise ValueError('this shared variable already has an update '
