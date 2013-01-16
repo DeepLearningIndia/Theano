@@ -96,9 +96,9 @@ class TensorStorage(Storage):
             self.numpy = value
         else:
             if hasattr(self.tensor_type, 'filter_inplace') and self.numpy is not None:
-                self.numpy = self.type.filter_inplace(value, self.numpy, ** self.kwargs)
+                self.numpy = self.tensor_type.filter_inplace(value, self.numpy, ** self.kwargs)
             else:
-                self.numpy = self.type.filter(value, ** self.filter_kwargs)
+                self.numpy = self.tensor_type.filter(value, ** self.filter_kwargs)
 
 class TensorStorageVariable(Variable, _tensor_py_operators):
     """
