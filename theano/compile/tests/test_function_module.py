@@ -606,15 +606,28 @@ class T_picklefunction(unittest.TestCase):
         assert numpy.all(nl[6][nl[2]] == numpy.asarray([2, 3., 4]))
 
     def test_broken_pickle_with_shared(self):
+
+        # TODO: what condition does this test verify?
+
         saves = []
+
         def pers_save(obj):
+            """
+            Saves a numpy ndarray (returns None if input is not ndarray)
+            and returns an index that can be used to retrieve the
+            exact same ndarray using pers_load
+            """
             if isinstance(obj, numpy.ndarray):
                 saves.append(obj)
                 return len(saves)-1
             else:
                 return None
-        def pers_load(id):
-            return saves[id]
+
+        def pers_load(idx):
+            """
+            Retrieves a numpy ndarray saved with pers_save.
+            """
+            return saves[idx]
 
         a = numpy.random.rand(4, 5)
         b = numpy.random.rand(5, 4)
