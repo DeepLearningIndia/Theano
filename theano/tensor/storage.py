@@ -379,3 +379,5 @@ class TensorStorageVariable(Variable, _tensor_py_operators):
         cp.tag = copy.copy(self.tag)
         return cp
 
+    def _as_TensorVariable(self):
+        raise NotImplementedError()
