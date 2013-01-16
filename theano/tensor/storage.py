@@ -109,14 +109,14 @@ class TensorStorageVariable(Variable, _tensor_py_operators):
     """
 
     def __init__(self, name, type, value, strict,
-                 allow_downcast=None, container=None):
+                 allow_downcast=None, storage=None):
         """
         :param name: The name for this variable (see `Variable`).
 
         :param type: The type for this variable (see `Variable`).
 
-        :param value: A value to associate with this variable (a new
-        container will be created).
+        :param value: A TensorType value to associate with this variable
+            (a new TensorStorage will be created).
 
         :param strict: True -> assignments to .value will not be cast
         or copied, so they must have the correct type.
@@ -126,13 +126,39 @@ class TensorStorageVariable(Variable, _tensor_py_operators):
         False -> never allow precision loss.
         None -> only allow downcasting of a Python float to a scalar floatX.
 
-        :param container: The container to use for this
-        variable. Illegal to pass this as well as a value.
+        :param storage: The TensorStorage to use for this
+                    variable. Illegal to pass this as well as a value.
 
         :note: For more user-friendly constructor, see `shared`
 
         """
         Variable.__init__(self, type=type, name=name,
-                                             owner=None, index=None)
-        self.storage = TensorStorage(type, strict, allow_downcast)
-        self.storage.set_value(value)
+                                             owner=None, index=None,
+                                             storage=None)
+        if storage is None:
+            self.storage = TensorStorage(type, strict, allow_downcast)
+            self.storage.set_value(value)
+        else:
+            assert value is None
+            self.storage = storage
+
+    def clone(self):
+        """
+        This is my (IG's) attempt at copying the clone method of shared variables.
+        I'm not sure I got it right, because the original is not documented.
+        Things I am unsure of:
+            -what is the tag for a shared variable?
+            -do we do deep or shallow copy of the storage? here I do shallow copy
+            of the storage, because the shared variable does a shallow copy of the
+            "container," but I don't understand the docstring for the "container"
+            field at all.
+        """
+        cp = self.__class__(
+                name=self.name,
+                type=self.type,
+                value=None,
+                strict=None,
+                storage=self.storage)
+        cp.tag = copy.copy(self.tag)
+        return cp
+
