@@ -89,9 +89,6 @@ class TensorStorage(Storage):
 
         """
 
-        raise NotImplementedError(str(type(self))+
-                "does not implement set_value.")
-
         if not borrow:
             value = copy.deepcopy(value)
 
