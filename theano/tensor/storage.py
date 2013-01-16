@@ -1,5 +1,5 @@
 """
-Module defining the TensorStorage class.
+Module TensorStorage functionality.
 """
 
 __authors__ = "Ian Goodfellow"
