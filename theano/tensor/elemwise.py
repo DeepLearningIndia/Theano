@@ -1114,16 +1114,6 @@ class Elemwise(Op):
         else:
             return ()
 
-# def elemwise_to_scal(fgraph):
-# TODO: why is this commented out? should it be removed?
-#       it has needed maintenance despite being commented
-#     mapping = {}
-#     inputs = []
-#     outputs = []
-#     for node in fgraph.io_toposort():
-#         if not isinstance(node.op, Elemwise):
-#             raise TypeError('All ops in the graph must be Elemwise.')
-
 
 ################
 ### CAReduce ###
