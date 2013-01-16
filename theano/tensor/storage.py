@@ -93,6 +93,15 @@ class TensorStorage(Storage):
             True to use the value directly, potentially creating problems
             related to aliased memory.
 
+        Currently, this only works with numpy ndarrays.
+        When cuda ndarrays are supported, then calling set_value with a numpy
+        ndarray when there is a stored cuda ndarray will invalidate the stored
+        cuda ndarray. A subsequent get_value call requesting a cuda ndarray will
+        regenerate it by using a host-to-gpu transfer, at which point, there will
+        be a valid version of both the numpy and the cuda ndarray in the storage
+        object. The reverse is also true, ie, calling set_value with a cuda ndarray
+        will invalidate any stored numpy ndarray.
+
         """
 
         if not borrow:

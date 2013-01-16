@@ -36,7 +36,7 @@ class Storage(object):
         Set the value stored in this Storage object.
 
         :param borrow:
-            True to use the value directly, potentially creating problems
+            True to permit using the value directly, potentially creating problems
             related to aliased memory.
 
         """
