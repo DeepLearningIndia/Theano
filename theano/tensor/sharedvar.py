@@ -5,6 +5,7 @@ import numpy
 import theano.tensor.basic
 from basic import TensorType, _tensor_py_operators
 from theano.compile import shared_constructor, SharedVariable
+from storage import TensorStorageVariable
 
 
 def load_shared_variable(val):
@@ -14,10 +15,11 @@ def load_shared_variable(val):
     return tensor_constructor(val)
 
 
+"""
 # _tensor_py_operators is first to have its version of __{gt,ge,lt,le}__
 class TensorSharedVariable(_tensor_py_operators, SharedVariable):
     pass
-
+"""
 
 @shared_constructor
 def tensor_constructor(value, name=None, strict=False, allow_downcast=None,
@@ -40,7 +42,7 @@ def tensor_constructor(value, name=None, strict=False, allow_downcast=None,
     if broadcastable is None:
         broadcastable = (False,) * len(value.shape)
     type = TensorType(value.dtype, broadcastable=broadcastable)
-    return TensorSharedVariable(type=type,
+    return TensorStorageVariable(type=type,
             value=numpy.array(value, copy=(not borrow)),
             name=name,
             strict=strict,

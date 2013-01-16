@@ -94,7 +94,43 @@ class TensorStorage(Storage):
             self.numpy = value
         else:
             if hasattr(self.tensor_type, 'filter_inplace') and self.numpy is not None:
-                self.numpy = self.type.filter_inplace(value, self.numpy)
+                self.numpy = self.type.filter_inplace(value, self.numpy, ** self.kwargs)
             else:
-                self.numpy = self.type.filter(value)
+                self.numpy = self.type.filter(value, ** self.filter_kwargs)
 
+class TensorStorageVariable(Variable, _tensor_py_operators):
+    """
+    A Variable whose non-symbolic value is TensorStorage.
+    This is mostly a temporary construct to ease the transition
+    to a new interface, where TensorStorage can be used as a value
+    of a TensorVariable directly.
+    """
+
+    def __init__(self, name, type, value, strict,
+                 allow_downcast=None, container=None):
+        """
+        :param name: The name for this variable (see `Variable`).
+
+        :param type: The type for this variable (see `Variable`).
+
+        :param value: A value to associate with this variable (a new
+        container will be created).
+
+        :param strict: True -> assignments to .value will not be cast
+        or copied, so they must have the correct type.
+
+        :param allow_downcast: Only applies if `strict` is False.
+        True -> allow assigned value to lose precision when cast during assignment.
+        False -> never allow precision loss.
+        None -> only allow downcasting of a Python float to a scalar floatX.
+
+        :param container: The container to use for this
+        variable. Illegal to pass this as well as a value.
+
+        :note: For more user-friendly constructor, see `shared`
+
+        """
+        Variable.__init__(self, type=type, name=name,
+                                             owner=None, index=None)
+        self.storage = TensorStorage(type, strict, allow_downcast)
+        self.storage.set_value(value)
