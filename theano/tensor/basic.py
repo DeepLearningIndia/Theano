@@ -873,10 +873,10 @@ class TensorType(Type):
         """
         :param allow_remove_inf: If True, when there is an inf in a,
                                  we allow any value in b in that position.
-                                 Event -inf
+                                 Even -inf
         :param allow_remove_nan: If True, when there is a nan in a,
                                  we allow any value in b in that position.
-                                 Event +-inf
+                                 Even +-inf
         """
         if isinstance(a, numpy.ndarray) and isinstance(b, numpy.ndarray):
             if a.shape != b.shape:
