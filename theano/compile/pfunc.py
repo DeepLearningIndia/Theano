@@ -9,7 +9,7 @@ from theano import config
 from theano.compile import orig_function, In, Out
 from theano.compile import UnusedInputError
 from theano.compile.sharedvalue import SharedVariable, shared
-from theano.gof import Container, Variable, generic, graph, Constant
+from theano.gof import Variable, Constant
 from theano.gof.python25 import any
 # We special-case TensorStorageVariable. This is temporary step on the way to
 # getting rid of SharedVariable altogether.
