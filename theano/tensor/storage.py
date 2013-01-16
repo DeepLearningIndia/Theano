@@ -11,7 +11,10 @@ import copy
 
 from theano.compile.storage import Storage
 from theano.gof.graph import Variable
+from theano.gof.type import Type
+
 from basic import _tensor_py_operators
+from basic import hashtype
 
 # Constants to pass as the "kind" argument of the get_value method
 CURRENT = 0
@@ -100,6 +103,221 @@ class TensorStorage(Storage):
             else:
                 self.numpy = self.tensor_type.filter(value, ** self.filter_kwargs)
 
+class TensorStorageType(Type):
+    """
+    A Type representing values that are TensorStorage.
+    This is mostly a temporary construct to ease the transition
+    to a new interface, where TensorStorage can be used as a value
+    of a TensorVariable directly.
+    """
+    def __init__(self, tensor_type):
+        """
+        :param tensor_type: A TensorType instance defining the type
+            of tensors that this Type's values are allowed to store.
+        """
+
+        self.tensor_type = tensor_type
+
+
+    def filter(self, data, strict=False, allow_downcast=None):
+        """Convert `data` to something which can be associated to a
+        `TensorVariable`.
+
+        This function is not meant to be called in user code.  It is for
+        `Linker` instances to use when running a compiled graph.
+        """
+        # Explicit error message when one accidentally uses a Variable as
+        # input (typical mistake, especially with shared variables).
+        if isinstance(data, Variable):
+            raise TypeError(
+                    'Expected a TensorStorage, but found a Variable: '
+                    'maybe you are trying to call a function on a (possibly '
+                    'shared) variable instead of a numeric array?')
+
+        if not isinstance(data, TensorStorage):
+            raise TypeError("Expected TensorStorage, got " +
+                    str(type(data)))
+
+        if not isinstance(data.tensor_type, self.tensor_type):
+            raise TypeError("Expected TensorStorage storing " +
+                    str(self.tensor_type) + ", got TensorStorage storing " +
+                    str(data.tensor_type))
+
+        return data
+
+    def filter_variable(self, other):
+        """
+        Convert a symbolic Variable into this type, if possible.
+        (No conversions are currently possible)
+        """
+        if other.type == self:
+            return other
+
+        raise TypeError(
+                'Cannot convert Type %(othertype)s '
+                '(of Variable %(other)s) into Type %(self)s. '
+                'You can try to manually convert %(other)s into a %(self)s.'
+                % dict(
+                    othertype=other.type,
+                    other=other,
+                    self=self)
+                )
+
+    def value_validity_msg(self, a):
+        try:
+            self.filter(a, strict=True)
+        except Exception, e:
+            return str(e)
+        return "value is valid"
+
+    def __eq__(self, other):
+        """Compare True iff other is the same kind of TensorStorage"""
+        return type(self) == type(other) and \
+            self.tensor_type == other.tensor_type
+
+    @staticmethod
+    def values_eq(a, b, force_same_dtype=True):
+        return a.tensor_type.values_eq(a.get_value(), b.get_value(),
+                force_same_dtype)
+
+    @staticmethod
+    def values_eq_approx(a, b, allow_remove_inf=False, allow_remove_nan=False):
+        """
+        :param allow_remove_inf: If True, when there is an inf in a.get_value(),
+                                 we allow any value in b.get_value() in that
+                                 position.
+                                 Even -inf
+        :param allow_remove_nan: If True, when there is a nan in a.get_value(),
+                                 we allow any value in b.get_value() in that position.
+                                 Even +-inf
+        """
+        raise NotImplementedError("The below is a copy-paste of TensorType.values_eq_approx")
+        if isinstance(a, numpy.ndarray) and isinstance(b, numpy.ndarray):
+            if a.shape != b.shape:
+                return False
+            if a.dtype != b.dtype:
+                return False
+            if 'int' in str(a.dtype):
+                return numpy.all(a == b)
+            else:
+                # work around a numpy.allclose bug:
+                # http://projects.scipy.org/numpy/ticket/1672
+                if a.ndim == 0 and numpy.isinf(a):
+                    a = a.reshape(1)
+                    b = b.reshape(1)
+
+                cmp = _allclose(a, b)
+                if cmp:
+                    # Numpy claims they are close, this is good enough for us.
+                    return True
+                # Numpy is unhappy, but it does not necessarily mean that a and
+                # b are different. Indeed, Numpy does not like missing values
+                # and will return False whenever some are found in a or b.
+                # The proper way would be to use the MaskArray stuff available
+                # in Numpy. However, it looks like it has been added to Numpy's
+                # core recently, so it may not be available to everyone. Thus,
+                # for now we use a home-made recipe, that should probably be
+                # revisited in the future.
+                a_missing = numpy.isnan(a)
+                a_inf = numpy.isinf(a)
+
+                if not (a_missing.any() or (allow_remove_inf and a_inf.any())):
+                    # There are no missing values in a, thus this is not the
+                    # reason why numpy.allclose(a, b) returned False.
+                    _logger.info(
+                        'numpy allclose failed for abs_err %f and rel_err %f',
+                        numpy.max(abs(a - b)),
+                        numpy.max(abs(a - b) / (abs(a) + abs(b))))
+                    return False
+                # The following line is what numpy.allclose bases its decision
+                # upon, according to its documentation.
+                rtol = 1.0000000000000001e-05
+                atol = 1e-8
+                cmp_elemwise = (numpy.absolute(a - b) <=
+                        (atol + rtol * numpy.absolute(b)))
+                # Find places where both a and b have missing values.
+                both_missing = a_missing * numpy.isnan(b)
+
+                # Find places where both a and b have inf of the same sign.
+                both_inf = a_inf * numpy.isinf(b)
+
+                # cmp_elemwise is weird when we have inf and -inf.
+                # set it to False
+                cmp_elemwise = numpy.where(
+                        both_inf & cmp_elemwise,
+                        a == b,
+                        cmp_elemwise)
+
+                # check the sign of the inf
+                both_inf = numpy.where(both_inf, (a == b), both_inf)
+
+                if allow_remove_inf:
+                    both_inf += a_inf
+                if allow_remove_nan:
+                    both_missing += a_missing
+
+                # Combine all information.
+                return (cmp_elemwise + both_missing + both_inf).all()
+
+        return False
+
+    @staticmethod
+    def values_eq_approx_remove_inf(a, b):
+        raise NotImplementedError("copy-paste from TensorType")
+        return TensorType.values_eq_approx(a, b, True)
+
+    @staticmethod
+    def values_eq_approx_remove_nan(a, b):
+        raise NotImplementedError("copy-paste from TensorType")
+        return TensorType.values_eq_approx(a, b, False, True)
+
+    @staticmethod
+    def values_eq_approx_remove_inf_nan(a, b):
+        raise NotImplementedError("copy-paste from TensorType")
+        return TensorType.values_eq_approx(a, b, True, True)
+
+    def __hash__(self):
+        """Hash equal for TensorStorageType with same hash of TensorType"""
+        return hashtype(self) ^ hash(self.tensor_type)
+
+    def make_variable(self, name=None):
+        """Return a `TensorVariable` of this type
+
+        :Parameters:
+         - `name`: str
+           A pretty name to identify this `Variable` when printing and
+           debugging
+        """
+        raise NotImplementedError("copy-paste from TensorType")
+        return TensorVariable(self, name=name)
+
+    def __str__(self):
+        raise NotImplementedError("copy-paste from TensorType")
+        if self.name:
+            return self.name
+        else:
+            b = self.broadcastable
+            named_broadcastable = {(): 'scalar',
+                     (False,): 'vector',
+                     (False, True): 'col',
+                     (True, False): 'row',
+                     (False, False): 'matrix'}
+            if b in named_broadcastable:
+                bcast = named_broadcastable[b]
+            else:
+                if python_any(b):
+                    bcast = str(b)
+                else:
+                    bcast = '%iD' % len(b)
+            return "TensorType(%s, %s)" % (str(self.dtype), bcast)
+
+    def __repr__(self):
+        raise NotImplementedError("copy-paste from TensorType")
+        return str(self)
+        #"TensorType{%s, %s}" % (str(self.dtype), str(self.broadcastable))
+
+
+
 class TensorStorageVariable(Variable, _tensor_py_operators):
     """
     A Variable whose non-symbolic value is TensorStorage.
@@ -132,7 +350,7 @@ class TensorStorageVariable(Variable, _tensor_py_operators):
         :note: For more user-friendly constructor, see `shared`
 
         """
-        Variable.__init__(self, type=type, name=name,
+        Variable.__init__(self, type=TensorStorageType(type), name=name,
                                              owner=None, index=None,
                                              storage=None)
         if storage is None:
