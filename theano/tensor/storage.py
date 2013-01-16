@@ -351,8 +351,7 @@ class TensorStorageVariable(Variable, _tensor_py_operators):
 
         """
         Variable.__init__(self, type=TensorStorageType(type), name=name,
-                                             owner=None, index=None,
-                                             storage=None)
+                                             owner=None, index=None)
         if storage is None:
             self.storage = TensorStorage(type, strict, allow_downcast)
             self.storage.set_value(value)
