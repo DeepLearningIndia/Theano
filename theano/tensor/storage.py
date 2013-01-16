@@ -122,6 +122,16 @@ class GetTensorFromStorage(Op):
 
         return Apply(self, [x], [output])
 
+    def __eq__(self, other):
+        return type(self) == type(other)
+
+    def __hash__(self):
+        return hashtype(self)
+
+    def perform(self, node, inp, out):
+        inp, = inp
+        out, = out
+        out[0] = inp.get_value(borrow=True, kind=NUMPY)
 
 get_tensor_from_storage = GetTensorFromStorage()
 
