@@ -11,6 +11,8 @@ import copy
 
 from theano.compile.storage import Storage
 from theano.gof.graph import Variable
+from theano.gof import Apply
+from theano.gof import Op
 from theano.gof.type import Type
 
 from basic import _tensor_py_operators
@@ -102,6 +104,26 @@ class TensorStorage(Storage):
                 self.numpy = self.tensor_type.filter_inplace(value, self.numpy, ** self.kwargs)
             else:
                 self.numpy = self.tensor_type.filter(value, ** self.filter_kwargs)
+
+class GetTensorFromStorage(Op):
+    """
+    An Op that accesses the tensor stored by a TensorStorage object
+    in numpy ndarray format.
+    """
+
+    def make_node(self, x):
+        if not isinstance(x, Variable):
+            raise TypeError("Expected theano Variable.")
+
+        if not isinstance(x.type, TensorStorageType):
+            raise TypeError("Expected a Variable of type TensorStorageType.")
+
+        output = x.storage.tensor_type.make_variable()
+
+        return Apply(self, [x], [output])
+
+
+get_tensor_from_storage = GetTensorFromStorage()
 
 class TensorStorageType(Type):
     """
