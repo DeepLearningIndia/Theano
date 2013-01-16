@@ -10,6 +10,13 @@ __contact__ = "theano-dev <theano-dev@googlegroups.com>"
 import copy
 
 from theano.compile.storage import Storage
+from theano.gof.graph import Variable
+from basic import _tensor_py_operators
+
+# Constants to pass as the "kind" argument of the get_value method
+CURRENT = 0
+NUMPY = 1
+CUDA = 2
 
 class TensorStorage(Storage):
     """
@@ -20,12 +27,8 @@ class TensorStorage(Storage):
     TensorType and CudaNDArrayType data.
     """
 
-    # Constants to pass as the "kind" argument of the get_value method
-    CURRENT = 0
-    NUMPY = 1
-    CUDA = 2
 
-    def __init__(self, tensor_type):
+    def __init__(self, tensor_type, strict, allow_downcast=None):
         """
         :param tensor_type: TensorType instance defining the type of
             data provided when the stored data is accessed as a TensorType.
@@ -34,8 +37,11 @@ class TensorStorage(Storage):
         self.tensor_type = tensor_type
         self.numpy = None
 
+        self.filter_kwargs = {'strict' : strict,
+                'allow_downcast' : allow_downcast }
 
-    def get_value(self, borrow=False, kind=TensorStorage.CURRENT):
+
+    def get_value(self, borrow=False, kind=CURRENT):
         """
         Return the value stored in this object as a numpy ndarray.
 
@@ -43,25 +49,24 @@ class TensorStorage(Storage):
             data structure (note that there may be one valid internal data
             structure at the same time).
         :param kind: integer code specifying which kind of data to return:
-            TensorConstant.CURRENT: Return any kind of data that the Storage
+            CURRENT: Return any kind of data that the Storage
                 object is currently storing. If both numpy and cuda structures
                 are simultaneously valid, defaults to numpy.
-            TensorConstant.NUMPY: Return the data as a numpy ndarray
-            TensorConstant.CUDA: Return the data as a cuda ndarry
+            NUMPY: Return the data as a numpy ndarray
+            CUDA: Return the data as a cuda ndarry
 
         Note that you are only guaranteed to get a reference rather than a copy
         if you specify both borrow=True and kind=TensorStorage.CURRENT, but in
         this case the return type is not predictable.
         """
 
-        if kind not in [TensorStorage.CURRENT, TensorStorage.NUMPY,
-                TensorStorage.CUDA]:
+        if kind not in [CURRENT, NUMPY, CUDA]:
             raise ValueError("kind must be TensorStorage.{CURRENT,NUMPY,CUDA}"
                     ", got " + str(kind))
 
         numpy = self.numpy
 
-        if kind == TensorStorage.CUDA:
+        if kind == CUDA:
             raise NotImplementedError("TensorStorage does not"
                     " support CUDA types yet.")
 
