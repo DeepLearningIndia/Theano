@@ -292,24 +292,7 @@ class TensorStorageType(Type):
         return TensorVariable(self, name=name)
 
     def __str__(self):
-        raise NotImplementedError("copy-paste from TensorType")
-        if self.name:
-            return self.name
-        else:
-            b = self.broadcastable
-            named_broadcastable = {(): 'scalar',
-                     (False,): 'vector',
-                     (False, True): 'col',
-                     (True, False): 'row',
-                     (False, False): 'matrix'}
-            if b in named_broadcastable:
-                bcast = named_broadcastable[b]
-            else:
-                if python_any(b):
-                    bcast = str(b)
-                else:
-                    bcast = '%iD' % len(b)
-            return "TensorType(%s, %s)" % (str(self.dtype), bcast)
+        return 'TensorStorageType(%s)' % str(self.tensor_type)
 
     def __repr__(self):
         raise NotImplementedError("copy-paste from TensorType")
