@@ -17,6 +17,7 @@ from theano.gof.type import Type
 
 from basic import _tensor_py_operators
 from basic import hashtype
+from basic import TensorType
 
 # Constants to pass as the "kind" argument of the get_value method
 CURRENT = 0
@@ -147,6 +148,10 @@ class TensorStorageType(Type):
         :param tensor_type: A TensorType instance defining the type
             of tensors that this Type's values are allowed to store.
         """
+
+        if not isinstance(tensor_type, TensorType):
+            raise TypeError("Expected TensorType, got " +
+                    str(type(tensor_type)))
 
         self.tensor_type = tensor_type
 
@@ -385,7 +390,7 @@ class TensorStorageVariable(Variable, _tensor_py_operators):
         """
         cp = self.__class__(
                 name=self.name,
-                type=self.type,
+                type=self.type.tensor_type,
                 value=None,
                 strict=None,
                 storage=self.storage)
