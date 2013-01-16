@@ -123,6 +123,11 @@ class GetTensorFromStorage(Op):
 
         return Apply(self, [x], [output])
 
+    def grad(self, inputs, ograds):
+        assert len(inputs) == 1
+        assert len(ograds) == 1
+        return ograds
+
     def __eq__(self, other):
         return type(self) == type(other)
 
