@@ -11,6 +11,13 @@ from theano.compile import UnusedInputError
 from theano.compile.sharedvalue import SharedVariable, shared
 from theano.gof import Container, Variable, generic, graph, Constant
 from theano.gof.python25 import any
+# We special-case TensorStorageVariable. This is temporary step on the way to
+# getting rid of SharedVariable altogether.
+# We can't import TensorStorageVariable here because tensor.storage imports
+# tensor.basic and tensor.basic imports compile.
+# Note that when the new system is complete, compile will no longer need to
+# special-case TensorStorageVariable so the cyclical dependency will be gone.
+TensorStorageVariable = None
 
 import logging
 _logger = logging.getLogger("theano.compile.pfunc")
@@ -63,6 +70,9 @@ def rebuild_collect_shared(outputs,
                                "updates" nor in "no_default_updates".
 
     """
+    global TensorStorageVariable
+    if TensorStorageVariable is None:
+        from theano.tensor.storage import TensorStorageVariable
 
     if isinstance(outputs, tuple):
         outputs = list(outputs)
@@ -85,6 +95,7 @@ def rebuild_collect_shared(outputs,
         v can have an fgraph attached to it, case in which we want to clone
         constants ( to avoid having a constant belonging to two fgraphs)
         '''
+
         # this co-recurses with clone_a
         assert v is not None
         if v in clone_d:
@@ -92,7 +103,7 @@ def rebuild_collect_shared(outputs,
         if v.owner:
             clone_a(v.owner, copy_inputs_over)
             return clone_d.setdefault(v, v)
-        elif isinstance(v, SharedVariable):
+        elif isinstance(v, (SharedVariable, TensorStorageVariable)):
             if v not in shared_inputs:
                 shared_inputs.append(v)
             if hasattr(v, 'default_update'):
@@ -335,7 +346,8 @@ def pfunc(params, outputs=None, mode=None, updates=None, givens=None,
         no_default_updates=False, accept_inplace=False, name=None,
         rebuild_strict=True, allow_input_downcast=None,
         profile=None, on_unused_input=None):
-    """Function-constructor for graphs with shared variables.
+    """
+    Function-constructor for graphs with shared variables.
 
     :type params: list of either Variable or Param instances.
     :param params: function parameters, these are not allowed to be shared
@@ -414,6 +426,11 @@ def pfunc(params, outputs=None, mode=None, updates=None, givens=None,
     # Then it clones the outputs and the update expressions.  This rebuilds a computation graph
     # from the inputs and the givens.
     #
+
+    global TensorStorageVariable
+    if TensorStorageVariable is None:
+        from theano.tensor.storage import TensorStorageVariable
+
     if updates is None:
         updates = []
     if givens is None:
@@ -474,7 +491,11 @@ def pfunc(params, outputs=None, mode=None, updates=None, givens=None,
             si = In(variable=sv, value=sv.container, mutable=True,
                     borrow=True, update=update_d[sv], shared=True)
         else:
-            si = In(variable=sv, value=sv.container,
+            if isinstance(sv, TensorStorageVariable):
+                value = sv.storage
+            else:
+                value = sv.container
+            si = In(variable=sv, value=value,
                     mutable=False, borrow=True, shared=True)
         inputs.append(si)
 

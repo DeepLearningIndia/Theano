@@ -18,6 +18,7 @@ from theano.gof.python25 import partial
 import mode as mode_module
 from io import In, SymbolicInput, SymbolicInputKit, SymbolicOutput
 from theano.compile.ops import deep_copy_op, view_op
+from theano.compile.storage import Storage
 
 import logging
 _logger = logging.getLogger('theano.compile.function_module')
@@ -311,7 +312,7 @@ class Function(object):
 
                 if value is not None:
                     # Always initialize the storage.
-                    if isinstance(value, gof.Container):
+                    if isinstance(value, (gof.Container, Storage)):
                         # There is no point in obtaining the current value
                         # stored in the container, since the container is
                         # shared.
@@ -624,6 +625,7 @@ class Function(object):
             if refeed:
                 if isinstance(value, gof.Container):
                     value = value.storage[0]
+                assert not isinstance(value, Storage)
                 self[i] = value
         #
         # NOTE: This logic needs to be replicated in
@@ -1048,7 +1050,7 @@ class FunctionMaker(object):
         self.required = [(i.value is None) for i in self.inputs]
         self.refeed = [
                 (i.value is not None and
-                 not isinstance(i.value, gof.Container) and
+                 not isinstance(i.value, (gof.Container, Storage)) and
                  i.update is None)
                 for i in self.inputs
         ]
