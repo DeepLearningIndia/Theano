@@ -2,6 +2,7 @@
 
 __docformat__ = 'restructuredtext en'
 
+import warnings
 
 from profiling import ProfileStats
 
@@ -71,8 +72,10 @@ def rebuild_collect_shared(outputs,
 
     """
     global TensorStorageVariable
+    global store_tensor
     if TensorStorageVariable is None:
         from theano.tensor.storage import TensorStorageVariable
+        from theano.tensor.storage import store_tensor
 
     if isinstance(outputs, tuple):
         outputs = list(outputs)
@@ -209,6 +212,12 @@ def rebuild_collect_shared(outputs,
             raise ValueError('this shared variable already has an update '
                              'expression',
                              (store_into, update_d[store_into]))
+
+        if isinstance(store_into, TensorStorageVariable):
+            warnings.warn("TODO: Verify that store_into can't alias memory with anything else, "
+                    " or that the mechanism that guards against aliasing of the outputs will "
+                    " work on TensorStorageVariable outputs.")
+            update_val = store_tensor(store_into, update_val)
 
         # filter_variable ensure smooth conversion of cpu/gpu Types
         try:
@@ -430,8 +439,10 @@ def pfunc(params, outputs=None, mode=None, updates=None, givens=None,
     #
 
     global TensorStorageVariable
+    global store_tensor
     if TensorStorageVariable is None:
         from theano.tensor.storage import TensorStorageVariable
+        from theano.tensor.storage import store_tensor
 
     if updates is None:
         updates = []
