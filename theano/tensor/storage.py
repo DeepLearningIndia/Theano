@@ -41,7 +41,7 @@ class TensorStorage(Storage):
         """
 
         self.tensor_type = tensor_type
-        self.numpy = None
+        self._numpy = None
 
         self.filter_kwargs = {'strict' : strict,
                 'allow_downcast' : allow_downcast }
@@ -70,7 +70,7 @@ class TensorStorage(Storage):
             raise ValueError("kind must be TensorStorage.{CURRENT,NUMPY,CUDA}"
                     ", got " + str(kind))
 
-        numpy = self.numpy
+        numpy = self._numpy
 
         if kind == CUDA:
             raise NotImplementedError("TensorStorage does not"
@@ -108,12 +108,12 @@ class TensorStorage(Storage):
             value = copy.deepcopy(value)
 
         if value is None:
-            self.numpy = value
+            self._numpy = value
         else:
-            if hasattr(self.tensor_type, 'filter_inplace') and self.numpy is not None:
-                self.numpy = self.tensor_type.filter_inplace(value, self.numpy, ** self.kwargs)
+            if hasattr(self.tensor_type, 'filter_inplace') and self._numpy is not None:
+                self._numpy = self.tensor_type.filter_inplace(value, self._numpy, ** self.kwargs)
             else:
-                self.numpy = self.tensor_type.filter(value, ** self.filter_kwargs)
+                self._numpy = self.tensor_type.filter(value, ** self.filter_kwargs)
 
 class GetTensorFromStorage(Op):
     """
