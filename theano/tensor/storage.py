@@ -458,7 +458,12 @@ class StoreTensor(Op):
                        ' function to remove broadcastable dimensions.')
             raise TypeError(err_msg, err_sug)
 
-        output = storage_var
+        output = TensorStorageVariable(
+                    name=None,
+                    type=tensor_type,
+                    value=None,
+                    strict=None,
+                    storage=storage)
 
         return Apply(self, [storage_var, x], [output])
 
