@@ -219,33 +219,34 @@ def rebuild_collect_shared(outputs,
                              (store_into, update_d[store_into]))
 
         if isinstance(store_into, TensorStorageVariable):
-            warnings.warn("TODO: Verify that store_into can't alias memory with anything else, "
-                    " or that the mechanism that guards against aliasing of the outputs will "
-                    " work on TensorStorageVariable outputs.")
-            update_val = store_tensor(store_into, update_val)
+            warnings.warn("""Here we just ignore the storage variable instead of scheduling it to be updated.
+                    Figure out how to schedule it to be updated. Make sure whatever solution you use does
+                    not result in aliasing.""")
+        else:
+            # filter_variable ensure smooth conversion of cpu/gpu Types
+            try:
+                update_val = store_into.type.filter_variable(update_val)
+            except TypeError, e:
+                if isinstance(store_into, TensorStorageVariable):
+                    pass
+                err_msg = ('An update must have the same type as the'
+                           ' original shared variable (shared_var=%s,'
+                           ' shared_var.type=%s,'
+                           ' update_val=%s, update_val.type=%s).' % (
+                               store_into,
+                               store_into.type,
+                               update_val,
+                               update_val.type))
+                err_sug = ('If the difference is related to the broadcast pattern,'
+                           ' you can call the'
+                           ' tensor.unbroadcast(var, axis_to_unbroadcast[, ...])'
+                           ' function to remove broadcastable dimensions.')
 
-        # filter_variable ensure smooth conversion of cpu/gpu Types
-        try:
-            update_val = store_into.type.filter_variable(update_val)
-        except TypeError, e:
-            err_msg = ('An update must have the same type as the'
-                       ' original shared variable (shared_var=%s,'
-                       ' shared_var.type=%s,'
-                       ' update_val=%s, update_val.type=%s).' % (
-                           store_into,
-                           store_into.type,
-                           update_val,
-                           update_val.type))
-            err_sug = ('If the difference is related to the broadcast pattern,'
-                       ' you can call the'
-                       ' tensor.unbroadcast(var, axis_to_unbroadcast[, ...])'
-                       ' function to remove broadcastable dimensions.')
+                raise TypeError(err_msg, err_sug)
+            assert update_val.type == store_into.type
 
-            raise TypeError(err_msg, err_sug)
-        assert update_val.type == store_into.type
-
-        update_d[store_into] = update_val
-        update_expr.append((store_into, update_val))
+            update_d[store_into] = update_val
+            update_expr.append((store_into, update_val))
 
     # Elements of "outputs" are here cloned to "cloned_outputs"
     if isinstance(outputs, list):
