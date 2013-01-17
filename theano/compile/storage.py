@@ -42,4 +42,4 @@ class Storage(object):
         """
 
         raise NotImplementedError(str(type(self))+
-                "does not implement set_value.")
+                " does not implement set_value.")
