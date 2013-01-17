@@ -425,9 +425,10 @@ class StoreTensor(Op):
     pfunc.
     """
 
-    def make_node(self, storage_var, x):
+    view_map = {0: [0]}
+    destroy_map = {0: [0]}
 
-        warnings.warn("TODO: set the view and destroy map correctly.")
+    def make_node(self, storage_var, x):
 
         if not isinstance(x, Variable):
             raise TypeError("Expected x to be a theano Variable.")
