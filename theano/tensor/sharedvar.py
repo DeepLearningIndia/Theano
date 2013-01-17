@@ -3,9 +3,9 @@ import traceback
 import numpy
 
 import theano.tensor.basic
-from basic import TensorType, _tensor_py_operators
+from theano.tensor.basic import TensorType, _tensor_py_operators
 from theano.compile import shared_constructor, SharedVariable
-from storage import TensorStorageVariable
+from theano.tensor.storage import TensorStorageVariable
 
 
 def load_shared_variable(val):
