@@ -33,6 +33,10 @@ def rebuild_collect_shared(outputs,
                            no_default_updates=False,
                           ):
     """
+    TODO:
+        This function implements similar functionality to graph.clone
+        and it should be merged with that.
+
     Function that allows replacing subgraphs of a computational
     graph.
 
@@ -80,8 +84,6 @@ def rebuild_collect_shared(outputs,
     if isinstance(outputs, tuple):
         outputs = list(outputs)
 
-    ## This function implements similar functionality as graph.clone
-    ## and it should be merged with that
     clone_d = {}
     update_d = {}
     update_expr = []
@@ -89,17 +91,18 @@ def rebuild_collect_shared(outputs,
     shared_inputs = []
 
     def clone_v_get_shared_updates(v, copy_inputs_over):
-        '''
+        """
         Clones a variable and its inputs recursively until all are in
         clone_d. Also appends all shared variables met along the way to
         shared inputs, and their default_update (if applicable) to update_d
         and update_expr.
 
-        v can have an fgraph attached to it, case in which we want to clone
+        v can have an fgraph attached to it, in which case we want to clone
         constants ( to avoid having a constant belonging to two fgraphs)
-        '''
 
-        # this co-recurses with clone_a
+        This function co-recurses with clone_a
+        """
+
         assert v is not None
         if v in clone_d:
             return clone_d[v]
@@ -135,10 +138,12 @@ def rebuild_collect_shared(outputs,
             return clone_d.setdefault(v, v)
 
     def clone_a(a, copy_inputs_over):
-        '''
+        """
         Clones a variable and its inputs recursively until all are in
-        clone_d. It occures with clone_v_get_shared_updates
-        '''
+        clone_d.
+
+        This function co-recurses with clone_v_get_shared_updates.
+        """
         if a is None:
             return None
         if a not in clone_d:
