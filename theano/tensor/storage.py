@@ -8,6 +8,7 @@ __license__ = "3-clause BSD License"
 __contact__ = "theano-dev <theano-dev@googlegroups.com>"
 
 import copy
+import warnings
 
 from theano.compile.storage import Storage
 from theano.gof.graph import Variable
@@ -413,3 +414,65 @@ class TensorStorageVariable(Variable, _tensor_py_operators):
 
     def _as_TensorVariable(self):
         return get_tensor_from_storage(self)
+
+class StoreTensor(Op):
+    """
+    An Op that stores a numpy ndarray into a TensorStorage.
+    (When compiliing on GPU, an the optimizations should change
+    the graph such that we end up storing an equivalent cuda
+    ndarray to exactly the same TensorStorage).
+    Should not be used by the end user; should only be used by
+    pfunc.
+    """
+
+    def make_node(self, storage_var, x):
+
+        warnings.warn("TODO: set the view and destroy map correctly.")
+
+        if not isinstance(x, Variable):
+            raise TypeError("Expected x to be a theano Variable.")
+
+        if not isinstance(storage_var, Variable):
+            raise TypeError("Expected storage_var to be a variable")
+
+        if not isinstance(storage_var.type, TensorStorageType):
+            raise TypeError("Expected storage_var to be a Variable "
+                    "of type TensorStorageType.")
+
+        storage = storage_var.storage
+
+        tensor_type = storage.tensor_type
+
+        if x.type != tensor_type:
+            err_msg = ('An update must have the same type as the'
+                       ' original storage location (storage=%s,'
+                       ' storage.tensor_type=%s,'
+                       ' update_val=%s, update_val.type=%s).' % (
+                           storage,
+                           tensor_type,
+                           x,
+                           x.type))
+            err_sug = ('If the difference is related to the broadcast pattern,'
+                       ' you can call the'
+                       ' tensor.unbroadcast(var, axis_to_unbroadcast[, ...])'
+                       ' function to remove broadcastable dimensions.')
+            raise TypeError(err_msg, err_sug)
+
+        output = storage_var
+
+        return Apply(self, [storage_var, x], [output])
+
+    def __eq__(self, other):
+        return type(self) == type(other)
+
+    def __hash__(self):
+        return hashtype(self)
+
+    def perform(self, node, inp, out):
+        storage, val = inp
+        out, = out
+        storage.set_value(val, borrow=True)
+        out[0] = storage
+
+# Not to be used by end user. Should just be used by pfunc
+store_tensor = StoreTensor()
